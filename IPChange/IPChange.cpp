@@ -7,6 +7,7 @@
 #include <locale>
 #include <sstream>
 #include <ctime>
+#include <fstream>
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 using namespace std;
 #pragma comment(lib,"ws2_32.lib")
@@ -14,6 +15,10 @@ using namespace std;
 
 char buffer[10000];
 string website_HTML;
+
+const string LASTIPtext = "LASTIP:";
+const string PATHtext = "PATH:";
+const string INTtext = "INTERVAL";
 //****************************************************
 
 int main(void) {
@@ -23,8 +28,72 @@ int main(void) {
 	struct tm *y2k;
 	double seconds;
 	string prev_ip;
+
+
+	ifstream configdata;
+	ifstream appdata;
+	ofstream oappdata;
+	string configfile;
+	string appfile;
+	string timeint = "300000";
+	string recprev_ip ="" ;
+	string path;
 	
 	
+
+	size_t pathpos;
+	bool pathposfound;
+	int timepos;
+	bool timeposfound;
+	size_t prevIPpos;
+	bool prevIPposfound;
+
+
+	configdata.open("config.ini"); // open config data
+	appdata.open("appdata.ini"); // open previous app data
+	recprev_ip.resize(15); // this plays important role in string comparison needs to be changed dynamically if possible
+	appdata.seekg(0, std::ios::end);
+	appfile.reserve(appdata.tellg());
+	appdata.seekg(0, std::ios::beg);
+
+	appfile.assign((std::istreambuf_iterator<char>(appdata)),
+		std::istreambuf_iterator<char>());
+	appdata.close();
+	cout << appfile << endl;
+	
+	prevIPpos = appfile.find(LASTIPtext);
+	//cout << prevIPpos << endl;
+	//cout << appfile[prevIPpos] << endl;
+	cout << recprev_ip[prevIPpos] << endl;
+	if (prevIPpos != std::string::npos)
+	{
+		//recprev_ip.clear();
+		for (int i = 0; i < appfile.size() - 7; i++) recprev_ip[i] = appfile[prevIPpos + i + 7]; // dynamically arrange limits??
+		prevIPposfound = true;
+	}
+	cout << recprev_ip << endl;
+	if (prevIPposfound) cout << "APP DATA Successfully Read" << endl;
+	else cout << "APP Data not read" << endl;
+
+	configdata.seekg(0, std::ios::end);
+	configfile.reserve(configdata.tellg());
+	configdata.seekg(0, std::ios::beg);
+
+	configfile.assign((std::istreambuf_iterator<char>(configdata)),
+		std::istreambuf_iterator<char>());
+	configdata.close();
+
+	// TODO : READ THESE VARS!
+	pathpos = configfile.find(PATHtext);
+	if (pathpos = std::string::npos)pathposfound = true;
+	timepos = configfile.find(INTtext);
+	if (timepos = std::string::npos)timeposfound = true;
+
+	if (pathposfound && timeposfound) cout << "Config File Loaded Successfully" << endl;
+	else cout << "Config File Not Read" << endl;
+
+
+
 	while (1)
 	{
 		website_HTML = "";
@@ -34,8 +103,12 @@ int main(void) {
 		char lineBuffer[200][80] = { ' ' };
 		char ip_address[16] = { "000.000.000.000"};
 		char timebuf[80];
-		
-		
+
+
+
+
+
+
 		int i = 0, bufLen = 0, j = 0, lineCount = 0;
 		int lineIndex = 0, posIndex = 0;
 		time(&timerstart);  /* get current time; same as: timer = time(NULL)  */
@@ -69,9 +142,16 @@ int main(void) {
 		
 		
 		//cout << "Your IP Address is  " << ip_address << " \n\n";
-		if (prev_ip != ip_address) cout << "IP Address Changed: " << ip_address << endl; // CALL CONFIGURATION FUNCTION HERE IF THE IP IS NOT THE SAME
+		if (recprev_ip != ip_address)
+		{
+			
+			cout << "IP Address Changed: " << ip_address << endl; // CALL CONFIGURATION FUNCTION HERE IF THE IP IS NOT THE SAME
+			oappdata.open("appdata.ini");
+			oappdata << "LASTIP:" << ip_address << endl;
+			oappdata.close();
+		}
 		else cout << "Last Updated: " << asctime(localtime(&timerstart)) << "IP: " << ip_address<<endl;
-		prev_ip = ip_address;
+		recprev_ip = ip_address;
 		Sleep(300000);
 		while (difftime(timerend, timerstart) <= 302)
 		{
@@ -87,6 +167,11 @@ int main(void) {
 }
 
 //****************************************************
+void getconfigurationinfo_tostring(string *appfile, string *config,string APPpath,string CONFpath)
+{
+
+
+}
 
 void get_Website(string url) {
 	WSADATA wsaData;
