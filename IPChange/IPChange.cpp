@@ -8,50 +8,114 @@
 #include <sstream>
 #include <ctime>
 #include <fstream>
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#include <cmath>
+#include <math.h>
+//#define _WINSOCK_DEPRECATED_NO_WARNINGS_
 using namespace std;
 #pragma comment(lib,"ws2_32.lib")
 
 
 char buffer[10000];
 string website_HTML;
-
+ofstream logfile;
+////////////////////////
+// Constant strings
 const string LASTIPtext = "LASTIP:";
-const string PATHtext = "PATH:";
-const string INTtext = "INTERVAL";
+const string PATHtext = "PATH1:";
+const string PATH2text = "PATH2:";
+const string PATH3text = "PATH3:";
+const string INTtext = "INTERVAL:";
+const string STORJACtext = "STORJAC:";
+const string STORJPATHtext = "STORJPATH:";
+const char *start_text = "start runner.bat";
+const char *batfilename = "runner.bat";
 //****************************************************
-
+// Functions
+int getstringinputsize(string *inputfile, string tobefound);
+int getstringinputsizeJSON(string *inputfile, string tobefound);
+void reconfigureSTORJ(string IP, string PATH1, string PATH2 = "0", string PATH3 = "0");
+void get_Website(string url);
 int main(void) {
-
+	////////////////////////
+	// Variables
 	time_t timerstart;
 	time_t timerend;
+	string filename;
+	string nicetime,formattedtime;
+	formattedtime.resize(7);
 	struct tm *y2k;
 	double seconds;
 	string prev_ip;
-
-
+	time(&timerstart);
+	filename.append("LOG-");
+	// Formatting time to MMMDDYY
+	nicetime = asctime(localtime(&timerstart));
+	for (int i = 4; i < 7; i++)formattedtime[i-4] = nicetime[i];
+	for (int i = 8; i < 10; i++)formattedtime[i - 5] = nicetime[i];
+	for (int i = 22; i < 24; i++)formattedtime[i - 17] = nicetime[i];
+	filename.append(formattedtime);
+	filename.append(".txt");
+	cout << "Formatted Time:" << formattedtime << endl;
+	cout << "LOG FILE: " << filename << endl;
+	logfile.open(filename);
+	if (!logfile.is_open())cout << "Error Opening Log File" << endl;
+	filename.clear();
 	ifstream configdata;
 	ifstream appdata;
 	ofstream oappdata;
+	ofstream oconfigdata;
+	ofstream runnerfile;
+
 	string configfile;
 	string appfile;
-	string timeint = "300000";
-	string recprev_ip ="" ;
+	char *timeint = "300000";
+	char *storjac = "0";
+	int storjac_int = 0;
+	int timeint_int = 300000;
+	string recprev_ip = "";
 	string path;
-	
-	
+	string path2;
+	string path3;
+	string storjpath = "0";
+	storjpath = { " " };
+	int storjpathsize = 0;
+	int pathsize = 0;
+	int path2size = 0;
+	int path3size = 0;
+	int timeintsize = 0;
+	int recprev_ipsize = 0;
+	int storjacsize = 0;
 
+	size_t storjpathpos;
 	size_t pathpos;
-	bool pathposfound;
-	int timepos;
-	bool timeposfound;
+	size_t path2pos;
+	size_t path3pos;
+	bool storjpathposfound = false;
+	bool pathposfound=false;
+	bool pathposfound2=false;
+	bool pathposfound3=false;
+	size_t timepos;
+	bool timeposfound=false;
 	size_t prevIPpos;
-	bool prevIPposfound;
+	bool prevIPposfound=false;
+	size_t storjacpos;
+	bool storjacfound=false;
 
-
-	configdata.open("config.ini"); // open config data
+	////////////////////////////////////////////////////////////////
+	// Reading previous appdata.ini which contains the last ip.
 	appdata.open("appdata.ini"); // open previous app data
-	recprev_ip.resize(15); // this plays important role in string comparison needs to be changed dynamically if possible
+	if (!appdata.is_open())
+	{
+		logfile << "MAIN: APP data could not be opened, generating new app file" << endl;
+		oappdata.open("appdata.ini");
+		oappdata << "LASTIP: " << endl;
+		oappdata.close();
+		cout << "App data was not found, generated default appdata file." << endl;
+		logfile << "MAIN: APP data output complete. Opening new app data." << endl;
+		appdata.open("appdata.ini");
+	}
+	
+	logfile << "MAIN: APP data opened successfully." << endl;
 	appdata.seekg(0, std::ios::end);
 	appfile.reserve(appdata.tellg());
 	appdata.seekg(0, std::ios::beg);
@@ -60,68 +124,207 @@ int main(void) {
 		std::istreambuf_iterator<char>());
 	appdata.close();
 	cout << appfile << endl;
-	
+	logfile << "MAIN: Getting previous IP size...";
+	recprev_ipsize = getstringinputsize(&appfile, LASTIPtext);
+	logfile << "IPSIZE: " << recprev_ipsize << endl;
+	recprev_ip.resize(recprev_ipsize);// this plays important role in string comparison needs to be changed dynamically if possible
+	logfile << "MAIN: Finding IP position in  APP file...";
 	prevIPpos = appfile.find(LASTIPtext);
 	//cout << prevIPpos << endl;
 	//cout << appfile[prevIPpos] << endl;
-	cout << recprev_ip[prevIPpos] << endl;
+	//cout << recprev_ip[prevIPpos] << endl;
 	if (prevIPpos != std::string::npos)
 	{
+		logfile << "IP position found:" << prevIPpos << endl;
 		//recprev_ip.clear();
-		for (int i = 0; i < appfile.size() - 7; i++) recprev_ip[i] = appfile[prevIPpos + i + 7]; // dynamically arrange limits??
+		for (int i = 0; i < recprev_ipsize; i++) recprev_ip[i] = appfile[prevIPpos + i + 7]; // dynamically arrange limits??
 		prevIPposfound = true;
 	}
 	cout << recprev_ip << endl;
 	if (prevIPposfound) cout << "APP DATA Successfully Read" << endl;
 	else cout << "APP Data not read" << endl;
+	/////////////////////////////////////////////////////////////////////
+	// Reading Config File Here
+	logfile << "MAIN: Opening Config file..."<<endl;
+	configdata.open("config.ini"); // open config data
+	if (!configdata.is_open())
+	{
+		logfile << "MAIN: Config data could not be opened, generating new config file" << endl;
+		oconfigdata.open("config.ini");
+		oconfigdata << "STORJAC:0" << endl << "STORJPATH:C:/\"Program Files\"/\"Storj Share\"/\"Storj Share.exe\"" << endl << "PATH1:C:/Users/yourusername/.config/storjshare/configs/x.json " << endl << "PATH2:0 " << endl << "PATH3:0 " << endl << "INTERVAL:300000" << endl;
+		oconfigdata.close();
+		logfile << "MAIN: Config data output complete.Opening new config file." << endl;
+		cout << "Config data could not be found. Generated default config file. Please edit paths for automatic STORJ configuration." << endl;
+		configdata.open("config.ini");
 
-	configdata.seekg(0, std::ios::end);
-	configfile.reserve(configdata.tellg());
-	configdata.seekg(0, std::ios::beg);
+	}
 
-	configfile.assign((std::istreambuf_iterator<char>(configdata)),
-		std::istreambuf_iterator<char>());
-	configdata.close();
+		logfile << "MAIN: Opening config file was successful." << endl;
+		configdata.seekg(0, std::ios::end);
+		configfile.reserve(configdata.tellg());
+		configdata.seekg(0, std::ios::beg);
 
-	// TODO : READ THESE VARS!
-	pathpos = configfile.find(PATHtext);
-	if (pathpos = std::string::npos)pathposfound = true;
-	timepos = configfile.find(INTtext);
-	if (timepos = std::string::npos)timeposfound = true;
+		configfile.assign((std::istreambuf_iterator<char>(configdata)),
+			std::istreambuf_iterator<char>());
+		configdata.close();
 
-	if (pathposfound && timeposfound) cout << "Config File Loaded Successfully" << endl;
-	else cout << "Config File Not Read" << endl;
+		logfile << "MAIN: Getting data sizes in config file..." << endl;
+		storjacsize = getstringinputsize(&configfile, STORJACtext);
+		storjpathsize = getstringinputsize(&configfile, STORJPATHtext);
+		pathsize = getstringinputsize(&configfile, PATHtext);
+		path2size = getstringinputsize(&configfile, PATH2text);
+		path3size = getstringinputsize(&configfile, PATH3text);
+		timeintsize = getstringinputsize(&configfile, INTtext);
+		
+		logfile << "MAIN: PATH SIZES- " <<storjacsize <<" "<< storjpathsize << " "<< pathsize << " " << path2size << " " << path3size << " " << timeintsize << " " << endl;
+		
+		storjpath.resize(storjpathsize);
+		storjac = new char(storjacsize);
+		path.resize(pathsize);
+		path2.resize(path2size);
+		path3.resize(path3size);
+		timeint = new char(timeintsize);
+		//storjac = new char(storjacsize);
+		logfile << "Memory allocation for config variables complete..." << endl;
+		//cout << "PATHSIZES:" << pathsize <<" " << path2size <<" " << path3size<< endl;
+		//cout << "INTSIZE:" << timeintsize <<endl;
+		logfile << "MAIN: Finding STORJAC variable...";
+		storjacpos = configfile.find(STORJACtext);
+		if (storjacpos != std::string::npos)
+		{
+			logfile << "STORJAC found" << endl;
+			storjac[0] = char(configfile[storjacpos + 8]);
+			storjacfound = true;
 
+		}
+		storjac_int = atoi(storjac);
 
+		if (storjac_int == 1)
+		{
+			logfile << "MAIN: STORJAC is defined ON..." << endl;
+			logfile << "MAIN: Starting to read PATH variables..." << endl;
+			storjpathpos = configfile.find(STORJPATHtext);
+			if (storjpathpos != std::string::npos)
+			{
+				logfile << "MAIN: STORJPATH found." << endl;
 
+				for (int i = 0; i < storjpathsize; i++)
+				{
+					storjpath[i] = configfile[storjpathpos + i + 10];
+					
+				}
+				storjpathposfound = true;
+				logfile << "MAIN: Creating .bat file to run STORJ..." << endl;
+				runnerfile.open(batfilename);
+				runnerfile << "start " << storjpath << endl;
+				runnerfile.close();
+				logfile << "MAIN: .bat file created..." << endl;
+			}
+			pathpos = configfile.find(PATHtext);
+			if (pathpos != std::string::npos)
+			{
+				logfile << "MAIN: PATH1 found." << endl;
+				for (int i = 0; i < pathsize; i++)
+				{
+					path[i] = configfile[pathpos + i + 6];
+
+				}
+				pathposfound = true;
+			}
+			path2pos = configfile.find(PATH2text);
+			if (path2pos != std::string::npos)
+			{
+				logfile << "MAIN: PATH2 found." << endl;
+				for (int i = 0; i < path2size; i++)
+				{
+					path2[i] = configfile[path2pos + i + 6];
+
+				}
+				pathposfound2 = true;
+			}
+			path3pos = configfile.find(PATH3text);
+			if (path3pos != std::string::npos)
+			{
+				logfile << "MAIN: PATH3 found." << endl;
+				for (int i = 0; i < path3size; i++)
+				{
+					path3[i] = configfile[path3pos + i + 6];
+
+				}
+				pathposfound3 = true;
+			}
+		}
+		timepos = configfile.find(INTtext);
+		if (timepos != std::string::npos)
+		{
+			logfile << "MAIN: INTERVAL found." << endl;
+			for (int i = 0; i < timeintsize; i++)
+			{
+				timeint[i] = configfile[timepos + i + 9];
+
+			}
+
+			timeposfound = true;
+
+		}
+		timeint_int = atoi(timeint);
+		//cout << "Time int"<< timeint_int << endl;
+		//  Check if required variables are found
+		if ((pathposfound || !storjac_int) && timeposfound && (pathposfound2 || !storjac_int) && (pathposfound3 || !storjac_int) && storjacfound && (storjpathposfound || !storjac_int))
+		{
+			logfile << "MAIN: Config file passed integrity check." << endl;
+			logfile << "STORJAC:" << storjac_int << endl << "STORJPATH:" << storjpath << endl << "PATH1:" << path << endl << "PATH2:" << path2 << endl << "PATH3:" << path3 << endl << "INTERVAL:" << timeint_int << endl;
+			cout << "Config File Loaded Successfully" << endl;
+			//cout << pathpos <<  endl;
+			//cout << timepos << endl;
+			cout << "STORJ AUTO CONFIGURATION: " << storjac_int << endl;
+			if (storjpathposfound)cout << "STORJPATH: " << storjpath << endl;
+			if (pathposfound)cout << "PATH1: " << path << endl;
+			if (pathposfound2)cout << "PATH2: " << path2 << endl;
+			if (pathposfound3)cout << "PATH3: " << path3 << endl;
+			cout << "INTERVAL: " << timeint_int << endl;
+		}
+		else cout << "Config File Not Read Properly. Please delete config.ini to regenerate a default config file." << endl;
+	
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Below is the main code for checking the IP in intervals.
 	while (1)
 	{
 		website_HTML = "";
 		y2k = 0;
 		locale local;
-		void get_Website(string url);
+		
 		char lineBuffer[200][80] = { ' ' };
 		char ip_address[16] = { "000.000.000.000"};
 		char timebuf[80];
-
-
-
-
-
 
 		int i = 0, bufLen = 0, j = 0, lineCount = 0;
 		int lineIndex = 0, posIndex = 0;
 		time(&timerstart);  /* get current time; same as: timer = time(NULL)  */
 		time(&timerend);
+		filename.append("LOG-");
+		// Formatting time to MMMDDYY
+		nicetime = asctime(localtime(&timerstart));
+		for (int i = 4; i < 7; i++)formattedtime[i - 4] = nicetime[i];
+		for (int i = 8; i < 10; i++)formattedtime[i - 5] = nicetime[i];
+		for (int i = 22; i < 24; i++)formattedtime[i - 17] = nicetime[i];
+		filename.append(formattedtime);
+		filename.append(".txt");
+		
+		//if(!logfile.is_open())logfile.open(filename);
+		filename.clear();
 		//seconds = difftime(timerend, timerstart);
 		cout << "\n\n\n";
+		logfile << "MAIN: Starting API connection..." << endl;
+		// CALL function to get IP using ipify.org API
 		get_Website("api.ipify.org");
 		for (size_t i = 0; i < website_HTML.length(); ++i) website_HTML[i] = tolower(website_HTML[i], local);
 
 		istringstream ss(website_HTML);
 		string stoken;
 		
-
+		logfile << "MAIN: Reading response..." << endl;
 		while (getline(ss, stoken, '\n')) {
 
 			cout <<"-->"<< stoken.c_str() << '\n';
@@ -139,40 +342,285 @@ int main(void) {
 
 			lineIndex++;
 		}
-		
+		logfile << "Response read successfully." << endl;
 		
 		//cout << "Your IP Address is  " << ip_address << " \n\n";
 		if (recprev_ip != ip_address)
 		{
-			
+			logfile << "MAIN: IP address changed" << endl;
 			cout << "IP Address Changed: " << ip_address << endl; // CALL CONFIGURATION FUNCTION HERE IF THE IP IS NOT THE SAME
+			logfile << "MAIN: Outputting new IP to appdata" << endl;
 			oappdata.open("appdata.ini");
 			oappdata << "LASTIP:" << ip_address << endl;
 			oappdata.close();
+			if(storjac_int == 1)reconfigureSTORJ(ip_address, path,path2,path3);
+			else cout << "STORJ AUTO CONFIGURATION DISABLED" << endl;
 		}
 		else cout << "Last Updated: " << asctime(localtime(&timerstart)) << "IP: " << ip_address<<endl;
+		logfile << "LAST UPDATED:" << asctime(localtime(&timerstart)) << endl;
+		//recprev_ip.resize(16);
 		recprev_ip = ip_address;
-		Sleep(300000);
-		while (difftime(timerend, timerstart) <= 302)
-		{
-			time(&timerend);
-			//cout << difftime(timerend, timerstart) << endl;
-		}
+		Sleep(timeint_int);
+		
+		// USE BELOW METHOD IF YOU WANT THE CPU ACTIVE
+
+		//while (difftime(timerend, timerstart) <= timeint_int/10 + 2)
+		//{
+		//	time(&timerend);
+		//	//cout << difftime(timerend, timerstart) << endl;
+		//}
 		//free(lineBuffer);
 	}
 	//cout << "\nPress ANY key to close.\n\n";
 	//cin.ignore(); cin.get();
-
+	logfile.close();
 	return 0;
 }
 
 //****************************************************
-void getconfigurationinfo_tostring(string *appfile, string *config,string APPpath,string CONFpath)
+
+/*reconfigureSTORJ
+@Author - Baris TANYERI
+@Description - Reconfigures STORJ configuration files with the given IP address and .json paths.
+@Dependencies - getstringinputsizeJSON(string *inputfile,string tobefound), logfile, start_text
+@libDependencies - fstream,iostream,sstream,windows.h
+@param string IP - new IP address to be replaced with the existing IP address
+@param string PATH1 - Path to .json file to be changed.
+@param string PATH2 - Same as above but optional.
+@param string PATH3 - Same as above but optional.
+@return void
+
+Can also be used to change other variables
+*/
+void reconfigureSTORJ(string IP,string PATH1, string PATH2, string PATH3)
 {
+	logfile << "reconfigureSTORJ: Reconfiguration started..." << endl;
+	ifstream storjconf1;
+	ofstream ostorjconf1;
+	string storjfile1;
+	string storjfile2;
+	size_t storjpos1;
+	int IPsize1,sizedif,initsize;
+	const string RPCtext = "\"rpcAddress\": \"";
+	const string ENDtext = "\",\n";
+	logfile << "reconfigureSTORJ: Calling system to kill Storj Share GUI..." << endl;
+	system("Taskkill /IM \"Storj Share.exe\" /F"); // kills storj share
+	system("Taskkill /IM \"cmd.exe\" /F"); // this closes previous command windows that was created everytime storj gui is run
 
+	//////////////////////////////////////////////////////////
+	// READING GIVEN STORJ PATHS
+	logfile << "reconfigureSTORJ: Opening PATH1..." << endl;
+	storjconf1.open(PATH1);
+	if (storjconf1.is_open())
+	{
+		// PATH 1
+		logfile << "reconfigureSTORJ: PATH1 Exists starting to read..." << endl;
+		cout << "Reading PATH1..." << endl;
+		storjconf1.seekg(0, std::ios::end);
+		initsize = storjconf1.tellg();
+		storjfile1.reserve(initsize);
+		storjconf1.seekg(0, std::ios::beg);
 
+		storjfile1.assign((std::istreambuf_iterator<char>(storjconf1)),
+			std::istreambuf_iterator<char>());
+		storjconf1.close();
+		storjpos1 = storjfile1.find(RPCtext);
+		IPsize1 = getstringinputsizeJSON(&storjfile1, RPCtext);
+		sizedif = int(IP.size() - IPsize1);
+		storjfile2.resize(initsize + sizedif);
+		if (storjpos1 != std::string::npos)
+		{
+
+			for (int i = 0; i < storjpos1; i++)storjfile2[i] = storjfile1[i];
+			for (int i = storjpos1; i < RPCtext.size() + storjpos1; i++)storjfile2[i] = RPCtext[i - storjpos1];
+			for (int i = storjpos1 + RPCtext.size(); i < RPCtext.size() + storjpos1 + IP.size(); i++)storjfile2[i] = IP[i - storjpos1 - RPCtext.size()];
+			//for (int i = storjpos1 + RPCtext.size() + IP.size(); i < RPCtext.size() + storjpos1 + IP.size() + ENDtext.size(); i++)storjfile2[i] = ENDtext[i - storjpos1 - IP.size() - RPCtext.size()];
+			for (int i = storjpos1 + RPCtext.size() + IP.size(); i < storjfile1.size()+sizedif; i++)
+			{
+			if(storjfile1[i - sizedif] != NULL)	storjfile2[i] = storjfile1[i - sizedif];
+			}
+	  
+			ostorjconf1.open(PATH1);
+			ostorjconf1 << storjfile2;
+			ostorjconf1.close();
+			storjconf1.close();
+		}
+		cout << "PATH1 IP variable changed." << endl;
+		logfile << "reconfigureSTORJ: PATH1 variable changed." << endl;
+	}
+	else
+	{
+		cout << "PATH1 Not Found." << endl;
+		logfile << "reconfigureSTORJ: PATH1 was not found or not accessible." << endl;
+	}
+	if (PATH2 != "0")
+	{
+		// PATH 2
+		storjconf1.open(PATH2);
+		if (storjconf1.is_open())
+		{
+			logfile << "reconfigureSTORJ: PATH2 Exists starting to read..." << endl;
+			cout << "Reading PATH2..." << endl;
+			storjconf1.seekg(0, std::ios::end);
+			initsize = storjconf1.tellg();
+			storjfile1.reserve(initsize);
+			storjconf1.seekg(0, std::ios::beg);
+
+			storjfile1.assign((std::istreambuf_iterator<char>(storjconf1)),
+				std::istreambuf_iterator<char>());
+			storjconf1.close();
+			storjpos1 = storjfile1.find(RPCtext);
+			IPsize1 = getstringinputsizeJSON(&storjfile1, RPCtext);
+			sizedif = int(IP.size() - IPsize1);
+			storjfile2.resize(initsize + sizedif);
+			if (storjpos1 != std::string::npos)
+			{
+
+				for (int i = 0; i < storjpos1; i++)storjfile2[i] = storjfile1[i];
+				for (int i = storjpos1; i < RPCtext.size() + storjpos1; i++)storjfile2[i] = RPCtext[i - storjpos1];
+				for (int i = storjpos1 + RPCtext.size(); i < RPCtext.size() + storjpos1 + IP.size(); i++)storjfile2[i] = IP[i - storjpos1 - RPCtext.size()];
+				//for (int i = storjpos1 + RPCtext.size() + IP.size(); i < RPCtext.size() + storjpos1 + IP.size() + ENDtext.size(); i++)storjfile2[i] = ENDtext[i - storjpos1 - IP.size() - RPCtext.size()];
+				for (int i = storjpos1 + RPCtext.size() + IP.size(); i < storjfile1.size() + sizedif; i++)
+				{
+					if (storjfile1[i - sizedif] != NULL)	storjfile2[i] = storjfile1[i - sizedif];
+				}
+
+				ostorjconf1.open(PATH3);
+				ostorjconf1 << storjfile2;
+				ostorjconf1.close();
+				storjconf1.close();
+			}
+			cout << "PATH2 IP variable changed." << endl;
+			logfile << "reconfigureSTORJ: PATH2 variable changed." << endl;
+		}
+		else
+		{
+			cout << "PATH2 Not Found." << endl;
+			logfile << "reconfigureSTORJ: PATH2 was not found or not accessible." << endl;
+		}
+	}
+	if (PATH3 != "0")
+	{
+		// PATH3
+		storjconf1.open(PATH3);
+		if (storjconf1.is_open())
+		{
+			logfile << "reconfigureSTORJ: PATH3 Exists starting to read..." << endl;
+			cout << "Reading PATH3..." << endl;
+			storjconf1.seekg(0, std::ios::end);
+			initsize = storjconf1.tellg();
+			storjfile1.reserve(initsize);
+			storjconf1.seekg(0, std::ios::beg);
+
+			storjfile1.assign((std::istreambuf_iterator<char>(storjconf1)),
+				std::istreambuf_iterator<char>());
+			storjconf1.close();
+			storjpos1 = storjfile1.find(RPCtext);
+			IPsize1 = getstringinputsizeJSON(&storjfile1, RPCtext);
+			sizedif = int(IP.size() - IPsize1);
+			storjfile2.resize(initsize + sizedif);
+			if (storjpos1 != std::string::npos)
+			{
+
+				for (int i = 0; i < storjpos1; i++)storjfile2[i] = storjfile1[i];
+				for (int i = storjpos1; i < RPCtext.size() + storjpos1; i++)storjfile2[i] = RPCtext[i - storjpos1];
+				for (int i = storjpos1 + RPCtext.size(); i < RPCtext.size() + storjpos1 + IP.size(); i++)storjfile2[i] = IP[i - storjpos1 - RPCtext.size()];
+				//for (int i = storjpos1 + RPCtext.size() + IP.size(); i < RPCtext.size() + storjpos1 + IP.size() + ENDtext.size(); i++)storjfile2[i] = ENDtext[i - storjpos1 - IP.size() - RPCtext.size()];
+				for (int i = storjpos1 + RPCtext.size() + IP.size(); i < storjfile1.size() + sizedif; i++)
+				{
+					if (storjfile1[i - sizedif] != NULL)	storjfile2[i] = storjfile1[i - sizedif];
+				}
+
+				ostorjconf1.open(PATH3);
+				ostorjconf1 << storjfile2;
+				ostorjconf1.close();
+				storjconf1.close();
+			}
+			cout << "PATH3 IP variable changed." << endl;
+			logfile << "reconfigureSTORJ: PATH3 variable changed." << endl;
+		}
+		else
+		{
+			cout << "PATH3 Not Found." << endl;
+			logfile << "reconfigureSTORJ: PATH3 was not found or not accessible." << endl;
+		}
+	}
+	logfile << "reconfigureSTORJ: Calling system to start STORJPATH" << endl;
+	// Start_text must be defined!
+	system(start_text);
 }
+/* int getstringinputsize (string inputfile, string tobefound)
+	@Description  Counts the data size of the variable given in the config file
+	@Dependencies - string.h
+	@param string *inputfile - A reference to the string to be searched
+	@param string tobefound - A string that is to be found in inputfile
+	@return int - Returns the data size after the given variable to the end of line
 
+	@example &inputfile where EOL represents end of line 
+	LASTIP:192.168.1.1 EOL
+	@example tobefound = "LASTIP:"
+	@example return = 11
+
+*/
+int getstringinputsize(string *inputfile, string tobefound)
+{
+	size_t strpos;
+	int size = 0;
+	size_t eolpos;
+	size_t datastartpos;
+	strpos = inputfile->find(tobefound);
+	datastartpos = inputfile->find(":",strpos);
+	eolpos = inputfile->find("\n", datastartpos);
+	bool eol = false;
+	for (int i = datastartpos+1; i < inputfile->size() && !eol ; i++)
+	{
+		
+		//cout << i;
+		if (i == eolpos)eol = true;
+		else
+		{
+			size += 1;
+		}
+	}
+	return size;
+}
+/* int getstringinputsizeJSON (string inputfile, string tobefound)
+@Description  Counts the data size of the variable given in the config file
+@Dependencies - string.h
+@param string *inputfile - A reference to the string to be searched
+@param string tobefound - A string that is to be found in inputfile
+@return int - Returns the data size after the given variable to the end of line
+
+@notice - Doesn't work with integer variables, create another function and change find variable for eolpos to "," only.
+@example &inputfile 
+"rpcAddress": "192.168.1.1",
+@example tobefound = \"rpcAddress\": \"
+@example return = int 11
+
+*/
+int getstringinputsizeJSON(string *inputfile, string tobefound)
+{
+	size_t strpos;
+	int size = 0;
+	size_t eolpos;
+	size_t datastartpos;
+	strpos = inputfile->find(tobefound);
+	datastartpos = inputfile->find(":", strpos);
+	eolpos = inputfile->find("\",", datastartpos);
+	bool eol = false;
+	for (int i = datastartpos + 3; i < inputfile->size() && !eol; i++)
+	{
+
+		//cout << i;
+		if (i == eolpos)eol = true;
+		else
+		{
+			size += 1;
+		}
+	}
+	return size;
+}
+// Winsock function that sends http request to the given string url and reads to response to char buffer that is defined globally.
 void get_Website(string url) {
 	WSADATA wsaData;
 	SOCKET Socket;
@@ -198,9 +646,10 @@ void get_Website(string url) {
 	SockAddr.sin_family = AF_INET;
 	SockAddr.sin_addr.s_addr = *((unsigned long*)host->h_addr);
 
-	if (connect(Socket, (SOCKADDR*)(&SockAddr), sizeof(SockAddr)) != 0) {
-		cout << "Could not connect";
-		system("pause");
+	while (connect(Socket, (SOCKADDR*)(&SockAddr), sizeof(SockAddr)) != 0) {
+		cout << "Could not connect, trying again in 30 seconds.";
+		Sleep(30000);
+		//system("pause");
 		//return 1;
 	}
 	send(Socket, get_http.c_str(), strlen(get_http.c_str()), 0);
