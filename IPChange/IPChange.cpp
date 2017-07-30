@@ -44,7 +44,7 @@ int main(void) {
 	string nicetime,formattedtime;
 	formattedtime.resize(7);
 	struct tm *y2k;
-	double seconds;
+	
 	string prev_ip;
 	time(&timerstart);
 	filename.append("LOG-");
@@ -297,7 +297,6 @@ int main(void) {
 		
 		char lineBuffer[200][80] = { ' ' };
 		char ip_address[16] = { "000.000.000.000"};
-		char timebuf[80];
 
 		int i = 0, bufLen = 0, j = 0, lineCount = 0;
 		int lineIndex = 0, posIndex = 0;
@@ -400,7 +399,8 @@ void reconfigureSTORJ(string IP,string PATH1, string PATH2, string PATH3)
 	string storjfile1;
 	string storjfile2;
 	size_t storjpos1;
-	int IPsize1,sizedif,initsize;
+	int IPsize1;
+	size_t initsize, sizedif;
 	const string RPCtext = "\"rpcAddress\": \"";
 	const string ENDtext = "\",\n";
 	logfile << "reconfigureSTORJ: Calling system to kill Storj Share GUI..." << endl;
@@ -426,7 +426,7 @@ void reconfigureSTORJ(string IP,string PATH1, string PATH2, string PATH3)
 		storjconf1.close();
 		storjpos1 = storjfile1.find(RPCtext);
 		IPsize1 = getstringinputsizeJSON(&storjfile1, RPCtext);
-		sizedif = int(IP.size() - IPsize1);
+		sizedif = IP.size() - IPsize1;
 		storjfile2.resize(initsize + sizedif);
 		if (storjpos1 != std::string::npos)
 		{
@@ -437,7 +437,7 @@ void reconfigureSTORJ(string IP,string PATH1, string PATH2, string PATH3)
 			//for (int i = storjpos1 + RPCtext.size() + IP.size(); i < RPCtext.size() + storjpos1 + IP.size() + ENDtext.size(); i++)storjfile2[i] = ENDtext[i - storjpos1 - IP.size() - RPCtext.size()];
 			for (int i = storjpos1 + RPCtext.size() + IP.size(); i < storjfile1.size()+sizedif; i++)
 			{
-			if(storjfile1[i - sizedif] != NULL)	storjfile2[i] = storjfile1[i - sizedif];
+			if(storjfile1[i - sizedif] != 0)	storjfile2[i] = storjfile1[i - sizedif];
 			}
 	  
 			ostorjconf1.open(PATH1);
@@ -471,7 +471,7 @@ void reconfigureSTORJ(string IP,string PATH1, string PATH2, string PATH3)
 			storjconf1.close();
 			storjpos1 = storjfile1.find(RPCtext);
 			IPsize1 = getstringinputsizeJSON(&storjfile1, RPCtext);
-			sizedif = int(IP.size() - IPsize1);
+			sizedif = IP.size() - IPsize1;
 			storjfile2.resize(initsize + sizedif);
 			if (storjpos1 != std::string::npos)
 			{
@@ -482,10 +482,10 @@ void reconfigureSTORJ(string IP,string PATH1, string PATH2, string PATH3)
 				//for (int i = storjpos1 + RPCtext.size() + IP.size(); i < RPCtext.size() + storjpos1 + IP.size() + ENDtext.size(); i++)storjfile2[i] = ENDtext[i - storjpos1 - IP.size() - RPCtext.size()];
 				for (int i = storjpos1 + RPCtext.size() + IP.size(); i < storjfile1.size() + sizedif; i++)
 				{
-					if (storjfile1[i - sizedif] != NULL)	storjfile2[i] = storjfile1[i - sizedif];
+					if (storjfile1[i - sizedif] != 0)	storjfile2[i] = storjfile1[i - sizedif];
 				}
 
-				ostorjconf1.open(PATH3);
+				ostorjconf1.open(PATH2);
 				ostorjconf1 << storjfile2;
 				ostorjconf1.close();
 				storjconf1.close();
@@ -517,7 +517,7 @@ void reconfigureSTORJ(string IP,string PATH1, string PATH2, string PATH3)
 			storjconf1.close();
 			storjpos1 = storjfile1.find(RPCtext);
 			IPsize1 = getstringinputsizeJSON(&storjfile1, RPCtext);
-			sizedif = int(IP.size() - IPsize1);
+			sizedif = IP.size() - IPsize1;
 			storjfile2.resize(initsize + sizedif);
 			if (storjpos1 != std::string::npos)
 			{
@@ -528,7 +528,7 @@ void reconfigureSTORJ(string IP,string PATH1, string PATH2, string PATH3)
 				//for (int i = storjpos1 + RPCtext.size() + IP.size(); i < RPCtext.size() + storjpos1 + IP.size() + ENDtext.size(); i++)storjfile2[i] = ENDtext[i - storjpos1 - IP.size() - RPCtext.size()];
 				for (int i = storjpos1 + RPCtext.size() + IP.size(); i < storjfile1.size() + sizedif; i++)
 				{
-					if (storjfile1[i - sizedif] != NULL)	storjfile2[i] = storjfile1[i - sizedif];
+					if (storjfile1[i - sizedif] != 0)	storjfile2[i] = storjfile1[i - sizedif];
 				}
 
 				ostorjconf1.open(PATH3);
