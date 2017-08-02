@@ -9,10 +9,10 @@ CFLAGS  = -g -Wall
   # the build target executable:
 TARGET = ./IPChange/IPChange
 
-	all: $(TARGET)
+all: $(TARGET)
 
 	$(TARGET): $(TARGET).cpp
 	$(CC) $(CFLAGS) -o $(TARGET) $(TARGET).cpp
 
-	clean:
+clean:
 	$(RM) $(TARGET)
