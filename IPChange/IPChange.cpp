@@ -531,7 +531,7 @@ void replacedatainpath(string PATH, string var, string data)
 			//datasize = getstringinputsize(&sfile1, var);
 			//////////////////////////////////////////////////
 			sizedif = data.size() - datasize;
-			sfile2.resize(initsize + sizedif);
+			sfile2.resize(initsize+sizedif);
 			if (datapos != std::string::npos)
 			{
 
@@ -541,14 +541,22 @@ void replacedatainpath(string PATH, string var, string data)
 				//for (int i = datapos + var.size() + data.size(); i < var.size() + datapos + data.size() + ENDtext.size(); i++)sfile2[i] = ENDtext[i - datapos - data.size() - var.size()];
 				for (int i = datapos + var.size() + data.size(); i < sfile1.size() + sizedif; i++)
 				{
-					if (sfile1[i - sizedif] != 'NUL')	sfile2[i] = sfile1[i - sizedif];
+					if (sfile1[i - sizedif] != '\0')	sfile2[i] = sfile1[i - sizedif];
 					//if (sfile1[i - sizedif] = 'NUL') sfile2[i] = char();
 				}
+				int exspace = 0;
+				
+				for (int lastpos = datapos + var.size() + data.size(); lastpos < sfile2.size(); lastpos++)
+				{
+					if (sfile2[lastpos] == '\0')exspace += 1;
+				}
+				ifspath.close();
+				sfile2.resize(sfile2.size() - exspace);
 
 				oifspath.open(PATH);
 				oifspath << sfile2;
 				oifspath.close();
-				ifspath.close();
+				
 			}
 			cout << "PATH data variable changed." << endl;
 			logfile << "replacedatainpath: PATH variable changed." << endl;
