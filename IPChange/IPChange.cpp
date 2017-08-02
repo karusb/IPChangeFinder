@@ -102,6 +102,9 @@ int main(void) {
 	size_t storjacpos;
 	bool storjacfound=false;
 
+	bool appdatanotfound = false;
+	bool configdatanotfound = false;
+
 	////////////////////////////////////////////////////////////////
 	// Reading previous appdata.ini which contains the last ip.
 	appdata.open("appdata.ini"); // open previous app data
@@ -113,6 +116,7 @@ int main(void) {
 		oappdata.close();
 		cout << "App data was not found, generated default appdata file." << endl;
 		logfile << "MAIN: APP data output complete. Opening new app data." << endl;
+		appdatanotfound = true;
 		appdata.open("appdata.ini");
 	}
 	
@@ -156,7 +160,7 @@ int main(void) {
 		oconfigdata.close();
 		logfile << "MAIN: Config data output complete.Opening new config file." << endl;
 		cout << "Config data could not be found. Generated default config file. Please edit paths for automatic STORJ configuration." << endl;
-	
+		configdatanotfound = true;
 		configdata.open("config.ini");
 
 	}
@@ -350,10 +354,14 @@ int main(void) {
 		{
 			logfile << "MAIN: IP address changed" << endl;
 			cout << "IP Address Changed: " << ip_address << endl; // CALL CONFIGURATION FUNCTION HERE IF THE IP IS NOT THE SAME
-			logfile << "MAIN: Outputting new IP to appdata" << endl;
-			oappdata.open("appdata.ini");
-			oappdata << "LASTIP:" << ip_address << endl;
-			oappdata.close();
+			if (!appdatanotfound && !configdatanotfound)
+			{
+				logfile << "MAIN: Outputting new IP to appdata" << endl;
+				oappdata.open("appdata.ini");
+				oappdata << "LASTIP:" << ip_address << endl;
+				oappdata.close();
+			}
+			else cout << "Configure config.ini and restart IPChange.exe" << endl;
 			if(storjac_int == 1)reconfigureSTORJ(ip_address, path,path2,path3);
 			else cout << "STORJ AUTO CONFIGURATION DISABLED" << endl;
 		}
