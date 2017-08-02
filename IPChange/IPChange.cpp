@@ -34,6 +34,7 @@ const char *batfilename = "runner.bat";
 int getstringinputsize(string *inputfile, string tobefound);
 int getstringinputsizeJSON(string *inputfile, string tobefound);
 void reconfigureSTORJ(string IP, string PATH1, string PATH2 = "0", string PATH3 = "0");
+void replacedatainpath(string PATH, string var, string data);
 void get_Website(string url);
 int main(void) {
 	////////////////////////
@@ -381,7 +382,7 @@ int main(void) {
 /*reconfigureSTORJ
 @Author - Baris TANYERI
 @Description - Reconfigures STORJ configuration files with the given IP address and .json paths.
-@Dependencies - getstringinputsizeJSON(string *inputfile,string tobefound), logfile, start_text
+@Dependencies - getstringinputsizeJSON(string *inputfile,string tobefound),replacedatainpath(string PATH, string var, string data), logfile, start_text
 @libDependencies - fstream,iostream,sstream,windows.h
 @param string IP - new IP address to be replaced with the existing IP address
 @param string PATH1 - Path to .json file to be changed.
@@ -389,9 +390,8 @@ int main(void) {
 @param string PATH3 - Same as above but optional.
 @return void
 
-Can also be used to change other variables
 */
-void reconfigureSTORJ(string IP,string PATH1, string PATH2, string PATH3)
+void reconfigureSTORJ(string IP, string PATH1, string PATH2, string PATH3)
 {
 	logfile << "reconfigureSTORJ: Reconfiguration started..." << endl;
 	ifstream storjconf1;
@@ -399,7 +399,7 @@ void reconfigureSTORJ(string IP,string PATH1, string PATH2, string PATH3)
 	string storjfile1;
 	string storjfile2;
 	size_t storjpos1;
-	int IPsize1;
+	int datasize;
 	size_t initsize, sizedif;
 	const string RPCtext = "\"rpcAddress\": \"";
 	const string ENDtext = "\",\n";
@@ -409,142 +409,11 @@ void reconfigureSTORJ(string IP,string PATH1, string PATH2, string PATH3)
 
 	//////////////////////////////////////////////////////////
 	// READING GIVEN STORJ PATHS
-	logfile << "reconfigureSTORJ: Opening PATH1..." << endl;
-	storjconf1.open(PATH1);
-	if (storjconf1.is_open())
-	{
-		// PATH 1
-		logfile << "reconfigureSTORJ: PATH1 Exists starting to read..." << endl;
-		cout << "Reading PATH1..." << endl;
-		storjconf1.seekg(0, std::ios::end);
-		initsize = storjconf1.tellg();
-		storjfile1.reserve(initsize);
-		storjconf1.seekg(0, std::ios::beg);
-
-		storjfile1.assign((std::istreambuf_iterator<char>(storjconf1)),
-			std::istreambuf_iterator<char>());
-		storjconf1.close();
-		storjpos1 = storjfile1.find(RPCtext);
-		IPsize1 = getstringinputsizeJSON(&storjfile1, RPCtext);
-		sizedif = IP.size() - IPsize1;
-		storjfile2.resize(initsize + sizedif);
-		if (storjpos1 != std::string::npos)
-		{
-
-			for (int i = 0; i < storjpos1; i++)storjfile2[i] = storjfile1[i];
-			for (int i = storjpos1; i < RPCtext.size() + storjpos1; i++)storjfile2[i] = RPCtext[i - storjpos1];
-			for (int i = storjpos1 + RPCtext.size(); i < RPCtext.size() + storjpos1 + IP.size(); i++)storjfile2[i] = IP[i - storjpos1 - RPCtext.size()];
-			//for (int i = storjpos1 + RPCtext.size() + IP.size(); i < RPCtext.size() + storjpos1 + IP.size() + ENDtext.size(); i++)storjfile2[i] = ENDtext[i - storjpos1 - IP.size() - RPCtext.size()];
-			for (int i = storjpos1 + RPCtext.size() + IP.size(); i < storjfile1.size()+sizedif; i++)
-			{
-			if(storjfile1[i - sizedif] != 0)	storjfile2[i] = storjfile1[i - sizedif];
-			}
-	  
-			ostorjconf1.open(PATH1);
-			ostorjconf1 << storjfile2;
-			ostorjconf1.close();
-			storjconf1.close();
-		}
-		cout << "PATH1 IP variable changed." << endl;
-		logfile << "reconfigureSTORJ: PATH1 variable changed." << endl;
-	}
-	else
-	{
-		cout << "PATH1 Not Found." << endl;
-		logfile << "reconfigureSTORJ: PATH1 was not found or not accessible." << endl;
-	}
-	if (PATH2 != "0")
-	{
-		// PATH 2
-		storjconf1.open(PATH2);
-		if (storjconf1.is_open())
-		{
-			logfile << "reconfigureSTORJ: PATH2 Exists starting to read..." << endl;
-			cout << "Reading PATH2..." << endl;
-			storjconf1.seekg(0, std::ios::end);
-			initsize = storjconf1.tellg();
-			storjfile1.reserve(initsize);
-			storjconf1.seekg(0, std::ios::beg);
-
-			storjfile1.assign((std::istreambuf_iterator<char>(storjconf1)),
-				std::istreambuf_iterator<char>());
-			storjconf1.close();
-			storjpos1 = storjfile1.find(RPCtext);
-			IPsize1 = getstringinputsizeJSON(&storjfile1, RPCtext);
-			sizedif = IP.size() - IPsize1;
-			storjfile2.resize(initsize + sizedif);
-			if (storjpos1 != std::string::npos)
-			{
-
-				for (int i = 0; i < storjpos1; i++)storjfile2[i] = storjfile1[i];
-				for (int i = storjpos1; i < RPCtext.size() + storjpos1; i++)storjfile2[i] = RPCtext[i - storjpos1];
-				for (int i = storjpos1 + RPCtext.size(); i < RPCtext.size() + storjpos1 + IP.size(); i++)storjfile2[i] = IP[i - storjpos1 - RPCtext.size()];
-				//for (int i = storjpos1 + RPCtext.size() + IP.size(); i < RPCtext.size() + storjpos1 + IP.size() + ENDtext.size(); i++)storjfile2[i] = ENDtext[i - storjpos1 - IP.size() - RPCtext.size()];
-				for (int i = storjpos1 + RPCtext.size() + IP.size(); i < storjfile1.size() + sizedif; i++)
-				{
-					if (storjfile1[i - sizedif] != 0)	storjfile2[i] = storjfile1[i - sizedif];
-				}
-
-				ostorjconf1.open(PATH2);
-				ostorjconf1 << storjfile2;
-				ostorjconf1.close();
-				storjconf1.close();
-			}
-			cout << "PATH2 IP variable changed." << endl;
-			logfile << "reconfigureSTORJ: PATH2 variable changed." << endl;
-		}
-		else
-		{
-			cout << "PATH2 Not Found." << endl;
-			logfile << "reconfigureSTORJ: PATH2 was not found or not accessible." << endl;
-		}
-	}
-	if (PATH3 != "0")
-	{
-		// PATH3
-		storjconf1.open(PATH3);
-		if (storjconf1.is_open())
-		{
-			logfile << "reconfigureSTORJ: PATH3 Exists starting to read..." << endl;
-			cout << "Reading PATH3..." << endl;
-			storjconf1.seekg(0, std::ios::end);
-			initsize = storjconf1.tellg();
-			storjfile1.reserve(initsize);
-			storjconf1.seekg(0, std::ios::beg);
-
-			storjfile1.assign((std::istreambuf_iterator<char>(storjconf1)),
-				std::istreambuf_iterator<char>());
-			storjconf1.close();
-			storjpos1 = storjfile1.find(RPCtext);
-			IPsize1 = getstringinputsizeJSON(&storjfile1, RPCtext);
-			sizedif = IP.size() - IPsize1;
-			storjfile2.resize(initsize + sizedif);
-			if (storjpos1 != std::string::npos)
-			{
-
-				for (int i = 0; i < storjpos1; i++)storjfile2[i] = storjfile1[i];
-				for (int i = storjpos1; i < RPCtext.size() + storjpos1; i++)storjfile2[i] = RPCtext[i - storjpos1];
-				for (int i = storjpos1 + RPCtext.size(); i < RPCtext.size() + storjpos1 + IP.size(); i++)storjfile2[i] = IP[i - storjpos1 - RPCtext.size()];
-				//for (int i = storjpos1 + RPCtext.size() + IP.size(); i < RPCtext.size() + storjpos1 + IP.size() + ENDtext.size(); i++)storjfile2[i] = ENDtext[i - storjpos1 - IP.size() - RPCtext.size()];
-				for (int i = storjpos1 + RPCtext.size() + IP.size(); i < storjfile1.size() + sizedif; i++)
-				{
-					if (storjfile1[i - sizedif] != 0)	storjfile2[i] = storjfile1[i - sizedif];
-				}
-
-				ostorjconf1.open(PATH3);
-				ostorjconf1 << storjfile2;
-				ostorjconf1.close();
-				storjconf1.close();
-			}
-			cout << "PATH3 IP variable changed." << endl;
-			logfile << "reconfigureSTORJ: PATH3 variable changed." << endl;
-		}
-		else
-		{
-			cout << "PATH3 Not Found." << endl;
-			logfile << "reconfigureSTORJ: PATH3 was not found or not accessible." << endl;
-		}
-	}
+	logfile << "reconfigureSTORJ: Opening PATHS..." << endl;
+	replacedatainpath(PATH1, RPCtext, IP);
+	replacedatainpath(PATH2, RPCtext, IP);
+	replacedatainpath(PATH3, RPCtext, IP);
+	
 	logfile << "reconfigureSTORJ: Calling system to start STORJPATH" << endl;
 	// Start_text must be defined!
 	system(start_text);
@@ -586,7 +455,7 @@ int getstringinputsize(string *inputfile, string tobefound)
 }
 /* int getstringinputsizeJSON (string inputfile, string tobefound)
 @Description  Counts the data size of the variable given in the config file
-@Dependencies - string.h
+@libDependencies - string.h
 @param string *inputfile - A reference to the string to be searched
 @param string tobefound - A string that is to be found in inputfile
 @return int - Returns the data size after the given variable to the end of line
@@ -619,6 +488,77 @@ int getstringinputsizeJSON(string *inputfile, string tobefound)
 		}
 	}
 	return size;
+}
+/*
+@Description - Replaces the given variable data with the given string data in the given PATH.
+@Dependencies - logfile, getstringinputsizeJSON(string *inputfile, string tobefound)
+@libDependencies - string.h, ifstream
+@param string PATH - Path of the file to be read and re-written
+@param string var - variable name in string such as "\"rpcAddress\": \""
+@param string data - Data that is to be replaced with the data in the file
+@notice - skips the whole process if path is set to char(0) 
+*/
+void replacedatainpath(string PATH, string var, string data)
+{
+	ifstream ifspath;
+	ofstream oifspath;
+	string sfile1;
+	string sfile2;
+	size_t datapos;
+	size_t initsize, sizedif;
+	int datasize;
+
+	if (PATH != "0")
+	{
+		// PATH
+		ifspath.open(PATH);
+		if (ifspath.is_open())
+		{
+			logfile << "replacedatainpath: PATH Exists starting to read..." << endl;
+			cout << "Reading PATH..." << endl;
+			ifspath.seekg(0, std::ios::end);
+			initsize = ifspath.tellg();
+			sfile1.reserve(initsize);
+			ifspath.seekg(0, std::ios::beg);
+
+			sfile1.assign((std::istreambuf_iterator<char>(ifspath)),
+				std::istreambuf_iterator<char>());
+			ifspath.close();
+			datapos = sfile1.find(var);
+			//////////////////////////////////////////////////
+			// CREATE YOUR OWN FUNCTION WHERE NECESSARY FOR DIFFERENT FORMATS
+			datasize = getstringinputsizeJSON(&sfile1, var);
+			//datasize = getstringinputsize(&sfile1, var);
+			//////////////////////////////////////////////////
+			sizedif = data.size() - datasize;
+			sfile2.resize(initsize + sizedif);
+			if (datapos != std::string::npos)
+			{
+
+				for (int i = 0; i < datapos; i++)sfile2[i] = sfile1[i];
+				for (int i = datapos; i < var.size() + datapos; i++)sfile2[i] = var[i - datapos];
+				for (int i = datapos + var.size(); i < var.size() + datapos + data.size(); i++)sfile2[i] = data[i - datapos - var.size()];
+				//for (int i = datapos + var.size() + data.size(); i < var.size() + datapos + data.size() + ENDtext.size(); i++)sfile2[i] = ENDtext[i - datapos - data.size() - var.size()];
+				for (int i = datapos + var.size() + data.size(); i < sfile1.size() + sizedif; i++)
+				{
+					if (sfile1[i - sizedif] != 'NUL')	sfile2[i] = sfile1[i - sizedif];
+					//if (sfile1[i - sizedif] = 'NUL') sfile2[i] = char();
+				}
+
+				oifspath.open(PATH);
+				oifspath << sfile2;
+				oifspath.close();
+				ifspath.close();
+			}
+			cout << "PATH data variable changed." << endl;
+			logfile << "replacedatainpath: PATH variable changed." << endl;
+		}
+		else
+		{
+			cout << "PATH Not Found." << endl;
+			logfile << "replacedatainpath: PATH was not found or not accessible." << endl;
+		}
+	}
 }
 // Winsock function that sends http request to the given string url and reads to response to char buffer that is defined globally.
 void get_Website(string url) {
