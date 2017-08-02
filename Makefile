@@ -7,7 +7,7 @@
   CFLAGS  = -g -Wall
 
   # the build target executable:
-  TARGET = /IPChange/IPChange
+  TARGET = ./IPChange/IPChange
 
   all: $(TARGET)
 
