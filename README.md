@@ -36,3 +36,7 @@ When the STORJAC is NOT ON, the algorithm only reports the IP and saves the last
 # -LOGGING
 	Each day is logged in a separate text file to keep track of your previous IP's,
 	 as well as some extra information for me to debug if you have any problems.
+	 
+# -TODO:
+- MAKEFILE for easier compilation.
+- Preprocessor definitions to compile with success = _WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS
