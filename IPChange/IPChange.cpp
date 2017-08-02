@@ -156,6 +156,7 @@ int main(void) {
 		oconfigdata.close();
 		logfile << "MAIN: Config data output complete.Opening new config file." << endl;
 		cout << "Config data could not be found. Generated default config file. Please edit paths for automatic STORJ configuration." << endl;
+	
 		configdata.open("config.ini");
 
 	}
