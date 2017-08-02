@@ -1,10 +1,11 @@
 CC=g++
 CFLAGS=-g -Wall
-TARGET=./IPChange/IPChange
+PATH=./IPChange/
+TARGET=IPChange
 
 all: $(TARGET)
-	$(CC) $(CFLAGS) -o $(TARGET).o -c $(TARGET).cpp
-	$(CC) -o $(TARGET).exe $(TARGET).o
+	$(CC) $(CFLAGS) -o $(PATH)$(TARGET).o -c $(PATH)$(TARGET).cpp
+	$(CC) -o $(PATH)$(TARGET).exe $(PATH)$(TARGET).o
 test:
 	$(TARGET).exe
 clean:
