@@ -9,12 +9,17 @@ The algoritm finds the IP address line and replaces with the current IP address 
 When the STORJAC is NOT ON, the algorithm only reports the IP and saves the last known IP to appdata.ini.
 
 # -INSTRUCTIONS
-	*Start IPChange.exe
-	*Close IPChange.exe
-	*Look at config.ini that was generated
-	*Change config.ini to your purposes described below
-	*Start IPChange.exe
-	*Your IP will be written to appdata.ini and keep the window open
+## Download
+[IPChange V1.0 for Windows 64bit x64](https://github.com/karusb/IPChangeFinder/raw/master/IPChange-V1.0-x64.zip)
+or
+[IPChange V1.0 for Windows 32bit x86](https://github.com/karusb/IPChangeFinder/raw/master/IPChange-V1.0-x86.zip)
+
+- Start IPChange.exe
+- Close IPChange.exe
+- Look at config.ini that was generated
+- Change config.ini to your purposes described below
+- Start IPChange.exe
+- Your IP will be written to appdata.ini and keep the window open
 
 # -CONFIGURATION
 	*There are 6 variables in the configuration file and they need to be present for the program to work.
